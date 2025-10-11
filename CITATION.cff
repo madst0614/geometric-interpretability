@@ -1,0 +1,83 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Geometric Interpretability: Understanding Neural Networks through Boundary Analysis"
+abstract: "A framework for understanding neural networks through spatial structure rather than semantic content. We propose Geometric Boundary Analysis (GBA) for detecting knowledge boundaries in activation space. Applying GBA to Mistral-7B, we discover that training produces remarkably structured representations: boundaries exhibit 0.3% curvature deviation from perfect linearity, 1.000 symmetry ratio between classes, and 148× information concentration in a single dimension. In a grokking experiment on modular arithmetic, we find that class separation correlates more strongly with generalization (r=0.910, p<0.0001) than boundary sharpness (r=-0.651). We demonstrate distance-based epistemic routing achieving 96.5% hallucination detection with multi-layer consensus, 98.6% accuracy in balanced mode, and perfect accuracy (100%) in high-stakes mode with zero false positives. The method requires only 30-second setup, <1ms inference overhead, and no model retraining."
+type: software
+authors:
+  - family-names: Choi
+    given-names: Seungho
+    email: madst0614@gmail.com
+    affiliation: Independent Researcher
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.17329836
+    description: "Zenodo DOI"
+repository-code: "https://github.com/madst0614/geometric-interpretability"
+keywords:
+  - interpretability
+  - neural networks
+  - geometric analysis
+  - boundary detection
+  - hallucination detection
+  - large language models
+  - epistemic uncertainty
+  - grokking
+  - generalization
+  - activation space
+  - machine learning safety
+license: MIT
+version: 1.0.0
+date-released: "2025-01-15"
+references:
+  - type: article
+    authors:
+      - family-names: Elhage
+        given-names: Nelson
+    title: "Toy models of superposition"
+    year: 2022
+    journal: "Transformer Circuits Thread"
+  - type: article
+    authors:
+      - family-names: Ji
+        given-names: Ziwei
+    title: "Survey of hallucination in natural language generation"
+    year: 2023
+    journal: "ACM Computing Surveys"
+    volume: 55
+    issue: 12
+    start: 1
+    end: 38
+  - type: conference-paper
+    authors:
+      - family-names: Meng
+        given-names: Kevin
+    title: "Locating and editing factual associations in GPT"
+    year: 2022
+    conference:
+      name: "NeurIPS"
+  - type: conference-paper
+    authors:
+      - family-names: Bartlett
+        given-names: Peter L.
+    title: "Spectrally-normalized margin bounds for neural networks"
+    year: 2017
+    conference:
+      name: "NeurIPS"
+  - type: article
+    authors:
+      - family-names: Power
+        given-names: Alethea
+    title: "Grokking: Generalization beyond overfitting on small algorithmic datasets"
+    year: 2022
+    journal: "arXiv preprint arXiv:2201.02177"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Choi
+      given-names: Seungho
+      email: madst0614@gmail.com
+  title: "Geometric Interpretability: Understanding Neural Networks through Boundary Analysis"
+  year: 2025
+  identifiers:
+    - type: doi
+      value: 10.5281/zenodo.17329836
