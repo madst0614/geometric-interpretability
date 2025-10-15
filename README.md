@@ -1,6 +1,6 @@
 # Geometric Interpretability: Understanding Neural Networks through Boundary Analysis
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17329836.svg)](https://doi.org/10.5281/zenodo.17329836)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17355345.svg)](https://doi.org/10.5281/zenodo.17355345)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
