@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-**Paper**: Geometric Interpretability: Understanding Neural Networks through Boundary Analysis  
+**Paper**: Geometric Interpretability: A Quantitative Framework for Understanding Large Language Models through Boundary Analysis  
 **Author**: Seungho Choi (madst0614@gmail.com)  
 **Date**: January 2025
 
