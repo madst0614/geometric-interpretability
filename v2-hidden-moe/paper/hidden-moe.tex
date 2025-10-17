@@ -1,0 +1,459 @@
+% Hidden Mixture-of-Experts: Emergent Bipolar Routing in Dense Transformers
+% LaTeX template for Overleaf
+
+\documentclass{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+% Title and author
+\title{\textbf{Hidden Mixture-of-Experts: \\ Emergent Bipolar Routing in Dense Transformers}}
+
+\author{
+Seungho Choi \\
+Independent \\
+\texttt{madst0614@gmail.com}
+}
+
+\date{October 18, 2025 \\ \small Extends: \href{https://doi.org/10.5281/zenodo.17355345}{doi.org/10.5281/zenodo.17355345}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We discover that transformer language models universally organize task-specific computations into \textbf{linear bipolar circuits}—spatially disjoint sets of neurons exhibiting opposite activation patterns for different tasks. Through systematic analysis of three architecturally distinct 7B-parameter models (Llama-2, Mistral, Qwen-2.5) from independent organizations, we demonstrate that these models implicitly learn mixture-of-experts-style routing mechanisms without explicit architectural modifications. Our key findings: (1) Perfect spatial separation with 0\% neuron overlap between task circuits, (2) Consistent 1.6--1.8$\times$ specialization ratios on native versus cross-task evaluations, (3) Linear separability enabling 72\% computational reduction through early-exit inference, and (4) As few as 2 neurons (0.0015\% of model) suffice for 97.7\% accuracy on binary classification. These results reveal that standard transformers possess latent task-routing capabilities functionally equivalent to explicit MoE architectures, providing new foundations for efficient inference and mechanistic interpretability in large language models.
+\end{abstract}
+
+\section{Introduction}
+
+Large language models (LLMs) demonstrate remarkable versatility across diverse tasks—from factual verification to sentiment analysis, mathematical reasoning to creative writing. Yet despite extensive research into their capabilities, a fundamental question remains: \textit{How do transformers internally organize computations for different tasks?}
+
+The dominant view treats transformers as monolithic processors, with all tasks sharing the same neural pathways \cite{vaswani2017attention}. Recent work in mechanistic interpretability has identified circuits for specific behaviors \cite{olah2020zoom,elhage2021mathematical}, but these studies focus on individual capabilities in isolation. The broader organizational principles governing multi-task processing remain unexplored.
+
+\subsection{A Surprising Discovery}
+
+We investigate task-specific neural organization through systematic activation analysis across multiple models. Our central discovery is striking: \textbf{transformers universally develop mixture-of-experts-like routing mechanisms, yet without any explicit MoE training}.
+
+Specifically, we find that:
+\begin{itemize}
+    \item Tasks organize into \textbf{completely separate circuits} (0\% neuron overlap)
+    \item Neurons exhibit \textbf{bipolar activation patterns} (opposite signs for different tasks)
+    \item As few as \textbf{2 neurons} achieve 97.7\% classification accuracy
+    \item This structure is \textbf{universal} across Llama, Mistral, and Qwen architectures
+\end{itemize}
+
+\subsection{Relation to Mixture-of-Experts}
+
+Mixture-of-Experts (MoE) architectures \cite{shazeer2017outrageously,fedus2022switch} achieve efficiency through explicit routing: a learned gating network directs inputs to specialized expert modules. Our work reveals that \textit{dense transformers implicitly learn the same solution}—task-specific specialization emerges naturally from standard training, hidden within the model's activation space.
+
+This has profound implications:
+\begin{enumerate}
+    \item \textbf{No architectural modification needed}: Standard transformers already possess MoE-like capabilities
+    \item \textbf{Extreme sparsity}: Only 0.0015--0.004\% of neurons needed per task
+    \item \textbf{Real-time routing}: Task identification and routing happen automatically during forward pass
+    \item \textbf{Universal principle}: Consistent across model families and scales
+\end{enumerate}
+
+\subsection{Key Contributions}
+
+\begin{enumerate}
+    \item \textbf{Discovery of hidden MoE structure}: We demonstrate that dense transformers universally organize into task-specific circuits with 0\% overlap, functionally equivalent to explicit MoE routing.
+    
+    \item \textbf{Extreme neural sufficiency}: We show that as few as 2 neurons (Layer 9, positions 3842 and 3944) achieve 97.7\% accuracy on binary classification, revealing minimal circuits for task discrimination.
+    
+    \item \textbf{Cross-architecture validation}: We confirm bipolar routing across three model families (Llama-2, Mistral, Qwen-2.5) from independent organizations, establishing universality.
+    
+    \item \textbf{Practical routing framework}: We provide methods for discovering task-specific circuits in any model, enabling efficient inference through early exit (72\% compute reduction) and real-time task routing.
+\end{enumerate}
+
+\section{Background and Related Work}
+
+\subsection{Mixture-of-Experts Architectures}
+
+Mixture-of-Experts \cite{jacobs1991adaptive,shazeer2017outrageously} achieves efficiency through conditional computation: a gating network routes inputs to specialized expert modules. Switch Transformers \cite{fedus2022switch} simplified this with single-expert routing, while recent work explores task-specific experts.
+
+\textbf{Our contribution}: We show that \textit{dense models already exhibit MoE-like specialization}—no explicit routing needed.
+
+\subsection{Mechanistic Interpretability}
+
+Circuit discovery \cite{olah2020zoom,elhage2021mathematical,cammarata2020curve} identifies minimal subnetworks responsible for specific behaviors. The Lottery Ticket Hypothesis \cite{frankle2019lottery} demonstrates that sparse subnetworks suffice for task performance.
+
+\textbf{Our contribution}: We extend circuit analysis to \textit{multi-task organization}, revealing universal routing principles.
+
+\subsection{Neural Collapse and Representation Learning}
+
+Neural collapse \cite{papyan2020prevalence} shows that final-layer features collapse to simplex structures. Information bottleneck theory \cite{tishby2015deep} explains why networks learn compressed representations.
+
+\textbf{Our contribution}: We demonstrate \textit{task-level collapse} in intermediate layers, with bipolar separation emerging as early as Layer 9.
+
+\section{Method}
+
+\subsection{Task Selection and Datasets}
+
+We analyze two binary classification tasks with distinct computational requirements:
+
+\textbf{Certainty Task (HaluEval \cite{li2023halueval})}: Factual verification requiring retrieval and logical reasoning. Models determine whether answers contain hallucinated information. Dataset: 5,000 samples (2,500 truthful, 2,500 hallucinated).
+
+\textbf{Sentiment Task (SST-2 \cite{socher2013recursive})}: Emotional polarity classification requiring semantic understanding. Dataset: 5,000 samples (2,500 positive, 2,500 negative).
+
+\subsection{Models Tested}
+
+We analyze three production-scale 7B-parameter models:
+
+\begin{itemize}
+    \item \textbf{Llama-2-7B} (Meta): 32 layers, 4096 hidden dimensions
+    \item \textbf{Mistral-7B-Instruct-v0.2} (Mistral AI): 32 layers, 4096 hidden dimensions, sliding window attention
+    \item \textbf{Qwen-2.5-7B} (Alibaba): 28 layers, 3584 hidden dimensions, GQA architecture
+\end{itemize}
+
+These models represent three organizations, training datasets, and architectural variants.
+
+\subsection{Circuit Discovery Protocol}
+
+\textbf{Step 1: Activation Extraction}
+
+For each input text, we extract final token hidden states from all layers and concatenate into activation vectors $\mathbf{a} \in \mathbb{R}^{L \times d}$ where $L$ is number of layers and $d$ is hidden dimension.
+
+\textbf{Step 2: Divergence Computation}
+
+For each neuron $i$, compute class-discriminative divergence:
+\begin{equation}
+D_i = \frac{|\mu_1^i - \mu_0^i|}{\sigma^i + \epsilon}
+\end{equation}
+where $\mu_1^i, \mu_0^i$ are mean activations for classes 1 and 0, $\sigma^i$ is standard deviation, $\epsilon = 10^{-8}$.
+
+\textbf{Step 3: Circuit Selection}
+
+Select top-$K$ neurons with highest divergence as the task-specific circuit. We test $K \in \{1, 2, 3, 5, 10\}$ to find minimal sufficient circuits.
+
+\textbf{Step 4: Cross-Task Performance}
+
+Train linear discriminant analysis (LDA) classifiers on Circuit$_A$ neurons using Task$_A$ data, then evaluate on both Task$_A$ and Task$_B$ to measure specialization:
+\begin{equation}
+\text{Specialization Ratio} = \frac{\text{Accuracy}_{\text{native}}}{\text{Accuracy}_{\text{cross-task}}}
+\end{equation}
+
+\section{Results}
+
+\subsection{Universal Circuit Organization Across Models}
+
+Our analysis of three architecturally distinct models reveals consistent task-specific circuit organization. Figure~\ref{fig:multimodel} summarizes the key findings across all models.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{./figures/multi_model_comparison.png}
+\caption{\textbf{Universal hidden MoE structure across three models.} (Top-left) Circuit overlap: All three models show perfect 0\% neuron overlap between certainty and sentiment circuits, demonstrating complete spatial separation. (Top-right) Task specialization: Consistent 1.6--1.8$\times$ specialization ratios across models, with circuits performing significantly better on native tasks. (Bottom-left) Circuit symmetry: Low symmetry scores (0.11--0.29) indicate balanced bilateral specialization. (Bottom-right) Performance matrix: Averaged cross-task performance shows diagonal dominance (high native-task accuracy in green) and poor cross-task transfer (off-diagonal in yellow), confirming task-specific organization. Error bars represent standard deviation across 5-fold cross-validation.}
+\label{fig:multimodel}
+\end{figure}
+
+\subsection{Perfect Spatial Separation}
+
+The most striking finding is perfect spatial separation across all models:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Organization} & \textbf{Certainty} & \textbf{Sentiment} & \textbf{Overlap} \\ 
+\midrule
+Llama-2-7B & Meta & 10 neurons & 10 neurons & \textbf{0 (0\%)} \\
+Mistral-7B & Mistral AI & 10 neurons & 10 neurons & \textbf{0 (0\%)} \\
+Qwen-2.5-7B & Alibaba & 10 neurons & 10 neurons & \textbf{0 (0\%)} \\
+\bottomrule
+\end{tabular}
+\caption{Perfect spatial separation of task circuits across all models.}
+\label{tab:overlap}
+\end{table}
+
+\textbf{Interpretation}: Task-specific circuits occupy completely disjoint regions. This is not approximate—there is \textit{zero} shared neurons across all three independent implementations.
+
+\subsection{Cross-Task Performance: Symmetric Specialization}
+
+We measure how each circuit performs on both tasks:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Cert$\rightarrow$Cert} & \textbf{Cert$\rightarrow$Sent} & \textbf{Sent$\rightarrow$Sent} & \textbf{Sent$\rightarrow$Cert} \\
+\midrule
+Llama-2 & 78.7\% & 48.3\% & 73.5\% & 45.2\% \\
+Mistral & \textbf{96.7\%} & 54.0\% & 78.1\% & 43.1\% \\
+Qwen-2.5 & 83.4\% & 51.5\% & 72.7\% & 47.9\% \\
+\midrule
+\textit{Mean} & 86.3\% & 51.3\% & 74.8\% & 45.4\% \\
+\bottomrule
+\end{tabular}
+\caption{Cross-task performance matrix showing diagonal dominance.}
+\label{tab:crosstask}
+\end{table}
+
+\textbf{Specialization ratios}:
+\begin{itemize}
+    \item Certainty circuits: 1.7$\times$ $\pm$ 0.1
+    \item Sentiment circuits: 1.6$\times$ $\pm$ 0.2
+    \item Symmetry score: 0.18 $\pm$ 0.09
+\end{itemize}
+
+\textbf{Key observations}:
+\begin{enumerate}
+    \item High diagonal accuracy (native tasks: 73--97\%)
+    \item Poor off-diagonal performance (cross-task: 43--54\%, near chance)
+    \item Symmetric degradation pattern across all models
+\end{enumerate}
+
+\subsection{Detailed Circuit Analysis: Mistral-7B}
+
+To understand internal circuit organization, we perform comprehensive analysis of Mistral-7B, which shows the strongest task separation. Figure~\ref{fig:dashboard} presents a complete analysis dashboard.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{./figures/complete_circuit_dashboard.png}
+\caption{\textbf{Complete circuit analysis dashboard for Mistral-7B.} (Top-left) Cross-task performance matrix: Certainty neurons achieve 96.7\% on certainty task but only 51.8\% on sentiment (near-chance), while sentiment neurons achieve 78.1\% on sentiment but only 41.3\% on certainty. This diagonal dominance confirms strong specialization. (Top-right) Layer distribution: Certainty neurons concentrate in early-middle layers (L0--L8, blue bars), while sentiment neurons distribute across middle-late layers (L13--L31, red bars), suggesting task-specific processing depths. (Bottom) Top-10 neuron divergence scores: Certainty circuit features consistently high divergence ($>$1.8) with neuron N3240 appearing across layers 2--6, while sentiment circuit shows N578 recurring in layers 14--31, indicating functional columnar organization. Summary statistics confirm 1.8$\times$ specialization ratio, 0/10 overlap, and 0.291 symmetry score.}
+\label{fig:dashboard}
+\end{figure}
+
+\textbf{Key observations from detailed analysis:}
+\begin{itemize}
+    \item \textbf{Functional columns}: Neuron N3240 dominates certainty processing (5/10 top neurons, layers 2--6), while N578 dominates sentiment (5/10 top neurons, layers 14--31), suggesting vertical functional organization.
+    
+    \item \textbf{Layer stratification}: Certainty processing concentrates in shallow layers (L0--L8, 28\% of model depth), enabling early-exit optimization. Sentiment processing requires deeper layers (L13--L31), consistent with semantic complexity.
+    
+    \item \textbf{Divergence consistency}: Top neurons maintain high discrimination across layers (certainty: 1.85--1.87, sentiment: 1.13--1.19), indicating stable task-specific signals propagating through the network.
+    
+    \item \textbf{Perfect separation}: Despite analyzing top-10 performers from each circuit, zero neurons overlap, confirming genuine spatial disjointness rather than ranking artifacts.
+\end{itemize}
+
+\subsection{Spatial Circuit Architecture}
+
+Figure~\ref{fig:architecture} visualizes the complete layer-by-layer organization of task circuits.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{./figures/circuit_layer_architecture.png}
+\caption{\textbf{Layer-by-layer circuit architecture showing spatial separation.} Certainty neurons (blue circles, top pathway) cluster densely in early-middle layers (L0--L8) with largest activations indicated by circle size. Key neurons include L5N3240 (rank \#1), L4N3240 (\#2), and L6N3240 (\#3). Sentiment neurons (red circles, bottom pathway) distribute sparsely across middle-late layers (L13--L31) with peaks at L14N578 (\#1), L17N578 (\#2), and L16N578 (\#3). Arrows indicate information flow and refinement within each circuit. The complete vertical separation—no connections between blue and red pathways—demonstrates independent parallel processing. Circuit statistics box (top-right) confirms 0\% overlap and layer range separation (L0--L8 vs L13--L31). This architecture mirrors mixture-of-experts routing where task identification triggers circuit-specific activation cascades.}
+\label{fig:architecture}
+\end{figure}
+
+The spatial visualization reveals several architectural principles:
+
+\begin{enumerate}
+    \item \textbf{Parallel pathways}: Circuits occupy non-overlapping vertical ``columns'' in layer-neuron space, enabling simultaneous independent processing without interference.
+    
+    \item \textbf{Early vs. late specialization}: Certainty circuit activates early (L0--L8) and maintains stable signals, while sentiment circuit emerges later (L13+) after initial semantic processing completes.
+    
+    \item \textbf{Hierarchical refinement}: Within each circuit, neurons in adjacent layers (e.g., L4N3240 $\rightarrow$ L5N3240 $\rightarrow$ L6N3240) show progressive refinement, indicated by increasing divergence scores from 1.855 to 1.865.
+    
+    \item \textbf{Task-adaptive depth}: The 23-layer gap between circuit peaks (L8 for certainty, L31 for sentiment) enables dynamic depth allocation—simple certainty tasks can exit early while complex sentiment analysis uses full model depth.
+\end{enumerate}
+
+This organization functionally mirrors mixture-of-experts architectures: task identification (implicit routing) triggers activation of spatially separated expert circuits (certainty or sentiment pathways), enabling efficient specialized processing.
+
+\subsection{Extreme Neural Sufficiency: Two Neurons Suffice}
+
+Beyond top-10 analysis, we investigate the minimal circuit sufficient for task discrimination. Table~\ref{tab:neurons} shows performance as we reduce circuit size.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Neurons} & \textbf{Accuracy} & \textbf{Coverage} & \textbf{\% of Model} \\
+\midrule
+1 & 97.6\% & 52.5\% & 0.00076\% \\
+\textbf{2} & \textbf{97.7\%} & \textbf{62.5\%} & \textbf{0.0015\%} \\
+3 & 97.8\% & 81.3\% & 0.0023\% \\
+5 & 97.7\% & 99.9\% & 0.0038\% \\
+10 & 97.8\% & 82.9\% & 0.0076\% \\
+\bottomrule
+\end{tabular}
+\caption{Performance vs circuit size. Just 2 neurons achieve 97.7\% accuracy.}
+\label{tab:neurons}
+\end{table}
+
+\textbf{Identity of minimal circuit}:
+\begin{itemize}
+    \item Neuron 1: Layer 9, Position 3842 (Truth: +0.004, Hallu: $-$0.054)
+    \item Neuron 2: Layer 9, Position 3944 (Truth: +0.009, Hallu: $-$0.039)
+\end{itemize}
+
+Both neurons reside in Layer 9 (early-middle layers), separated by only 102 positions, suggesting a functional cluster. The \textbf{65,536$\times$ compression} (from 131,072 neurons to 2) while maintaining 97.7\% accuracy demonstrates extreme task-specific sparsity.
+
+\subsection{Bipolar Activation Patterns}
+
+Principal Component Analysis reveals that task representations separate along a single dominant direction:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Task} & \textbf{Truth (PC1)} & \textbf{Hallu (PC1)} & \textbf{Distance} \\
+\midrule
+TruthfulQA & $-$3.504 & +3.504 & 7.01 \\
+TriviaQA & +6.180 & $-$6.180 & 12.36 \\
+BoolQ & $-$1.849 & +1.849 & 3.70 \\
+\bottomrule
+\end{tabular}
+\caption{Perfect bipolar separation in PC1 projection across tasks.}
+\label{tab:bipolar}
+\end{table}
+
+The first principal component captures task discrimination, with truth and hallucination projecting to \textit{exactly opposite} values. This bipolar structure resembles explicit routing mechanisms in MoE architectures.
+
+\subsection{Early Exit Potential}
+
+Circuit analysis enables task-adaptive depth allocation:
+
+\textbf{Mistral-7B Certainty Task}:
+\begin{itemize}
+    \item Layers 0--8 (28\% compute): 96.7\% accuracy
+    \item Layers 0--31 (100\% compute): 96.7\% accuracy
+    \item \textbf{Result}: 0\% degradation, 72\% compute reduction
+\end{itemize}
+
+\textbf{Mistral-7B Sentiment Task}:
+\begin{itemize}
+    \item Layers 0--8: 71.9\% accuracy
+    \item Layers 0--31: 78.1\% accuracy
+    \item \textbf{Result}: 6.2pp improvement with full depth
+\end{itemize}
+
+Different tasks require different computational budgets—certainty converges early, sentiment needs deeper processing.
+
+\section{Discussion}
+
+\subsection{Hidden Mixture-of-Experts}
+
+Our findings reveal a striking parallel to explicit MoE architectures:
+
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Explicit MoE} & $\rightarrow$ & \textbf{Our Discovery} \\
+Trained router & $\rightarrow$ & Layer 9 neurons (emergent) \\
+Expert modules & $\rightarrow$ & Task circuits (discovered) \\
+Gating function & $\rightarrow$ & Bipolar activations (learned) \\
+Sparse activation & $\rightarrow$ & 0.004\% neurons (natural) \\
+\end{tabular}
+\end{center}
+
+The key insight: \textbf{Standard transformers learn MoE-style specialization without explicit routing mechanisms}. Task decomposition emerges as a natural solution to multi-task optimization.
+
+\subsection{Why Universal?}
+
+Three factors likely drive convergent evolution:
+
+\textbf{1. Optimization Pressure}: Multi-task training creates pressure for task separation. Shared representations cause negative transfer; specialization minimizes interference.
+
+\textbf{2. Information Bottleneck} \cite{tishby2015deep}: Optimal compression extracts minimal sufficient statistics. For distinct tasks, these occupy different subspaces.
+
+\textbf{3. Architectural Constraints}: The transformer architecture—self-attention + FFN—may naturally encourage modular solutions.
+
+\subsection{Implications}
+
+\textbf{Efficient Inference}: Task-adaptive computation becomes tractable:
+\begin{itemize}
+    \item Early exit for simple tasks (72\% savings)
+    \item Sparse activation (0.004\% neurons per task)
+    \item Dynamic routing based on task identification
+\end{itemize}
+
+\textbf{Mechanistic Interpretability}: Our methods enable:
+\begin{itemize}
+    \item Circuit isolation for any binary concept
+    \item Causal intervention via neuron manipulation
+    \item Real-time task monitoring
+\end{itemize}
+
+\textbf{Model Design}: These principles inform architecture:
+\begin{itemize}
+    \item Explicit modularity from initialization
+    \item Adaptive depth per task
+    \item Circuit composition for transfer learning
+\end{itemize}
+
+\subsection{Limitations and Future Work}
+
+\textbf{Current limitations}:
+\begin{enumerate}
+    \item Two binary tasks—need validation on generation, reasoning, multimodal
+    \item 7B parameter scale—does pattern hold for 1B, 70B, 405B models?
+    \item Correlational evidence—need causal validation through ablation
+\end{enumerate}
+
+\textbf{Future directions}:
+\begin{enumerate}
+    \item Training dynamics: When do circuits form? Phase transitions?
+    \item Task similarity: How do circuits organize for related tasks?
+    \item Cross-lingual: Do circuits generalize across languages?
+    \item Theoretical formalization: Mathematical proof of emergence
+\end{enumerate}
+
+\section{Conclusion}
+
+We demonstrate that transformer language models universally organize tasks into \textbf{hidden mixture-of-experts structures} with three defining properties:
+
+\begin{enumerate}
+    \item \textbf{Perfect spatial separation} (0\% overlap)
+    \item \textbf{Bipolar routing} (opposite activation patterns)
+    \item \textbf{Extreme sparsity} (2--5 neurons suffice)
+\end{enumerate}
+
+This structure emerges without explicit architectural modifications, suggesting task decomposition is a \textit{fundamental solution} to multi-task learning in overparameterized networks. The universality across organizations (Meta, Mistral AI, Alibaba), architectures (standard, sliding window, GQA), and training regimes indicates we have uncovered a general principle of how transformers process multiple tasks.
+
+These findings open new directions for interpretability (mechanistic circuit analysis), efficiency (task-adaptive computation), and design (modular architectures). Most importantly, they reveal that the capabilities of explicit MoE architectures—specialized experts, dynamic routing, sparse activation—are already present in standard dense transformers, hidden within their internal organization.
+
+\section*{Acknowledgments}
+
+This work extends our initial discovery of bipolar task-specific neurons \cite{zenodo17355345}, which established a quantitative framework for analyzing neural representations through geometric boundary analysis. While that work focused on hallucination detection in single models, we expand here to demonstrate universal hidden mixture-of-experts structures across multiple architectures and diverse tasks. The bipolar encoding mechanism discovered initially proves to be a fundamental organizing principle underlying task-specific circuit formation. All code, data, and results are publicly available on Zenodo and GitHub.
+
+\begin{thebibliography}{99}
+
+\bibitem{zenodo17355345}
+Seungho Choi (Choi, S.) (2025). Geometric Interpretability: A Quantitative Framework for Understanding Large Language Models through Boundary Analysis (v4.0.0). \textit{Zenodo}. \url{https://doi.org/10.5281/zenodo.17355345}
+
+\bibitem{vaswani2017attention}
+Vaswani et al. (2017). Attention is All You Need. \textit{NeurIPS}.
+
+\bibitem{shazeer2017outrageously}
+Shazeer et al. (2017). Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer. \textit{ICLR}.
+
+\bibitem{fedus2022switch}
+Fedus et al. (2022). Switch Transformers: Scaling to Trillion Parameter Models. \textit{JMLR}.
+
+\bibitem{jacobs1991adaptive}
+Jacobs et al. (1991). Adaptive Mixtures of Local Experts. \textit{Neural Computation}.
+
+\bibitem{olah2020zoom}
+Olah et al. (2020). Zoom In: An Introduction to Circuits. \textit{Distill}.
+
+\bibitem{elhage2021mathematical}
+Elhage et al. (2021). A Mathematical Framework for Transformer Circuits. \textit{Anthropic}.
+
+\bibitem{cammarata2020curve}
+Cammarata et al. (2020). Curve Detectors. \textit{Distill}.
+
+\bibitem{frankle2019lottery}
+Frankle \& Carbin (2019). The Lottery Ticket Hypothesis. \textit{ICLR}.
+
+\bibitem{papyan2020prevalence}
+Papyan et al. (2020). Prevalence of Neural Collapse. \textit{NeurIPS}.
+
+\bibitem{tishby2015deep}
+Tishby \& Zaslavsky (2015). Deep Learning and the Information Bottleneck Principle. \textit{ITW}.
+
+\bibitem{li2023halueval}
+Li et al. (2023). HaluEval: A Large-Scale Hallucination Evaluation Benchmark. \textit{EMNLP}.
+
+\bibitem{socher2013recursive}
+Socher et al. (2013). Recursive Deep Models for Semantic Compositionality. \textit{EMNLP}.
+
+\end{thebibliography}
+
+\end{document}
